@@ -1,7 +1,7 @@
 # Collaboration MVP
 
 Research prototype for studying spoken collaboration and developing
-AI-supported guidance during collaborative inquiry learning.
+AI-supported guidance during collaborative inquiry based learning.
 
 ## Current capabilities
 
