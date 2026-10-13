@@ -33,8 +33,10 @@ Open a terminal in the project root:
 ```bash
 uv venv --python 3.11
 source .venv/bin/activate
-uv pip install -r requirements.txt # Install the required libraries into the Python environment
-uv pip install --no-deps -e . # Register this project with the environment, using its source files directly + dependencies were installed above, so skip installing them here.
+uv pip install -r requirements.txt 
+# Install the required libraries into the Python environment
+uv pip install --no-deps -e . 
+# Register this project with the environment, using its source files directly + dependencies were installed above, so skip installing them here.
 ```
 
 ## Configuration
