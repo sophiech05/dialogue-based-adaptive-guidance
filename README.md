@@ -4,7 +4,7 @@ A research prototype for capturing spoken collaboration between two students and
 
 DBAG combines stereo audio recording, calibrated speaker attribution, French speech transcription with MLX Whisper, and an operator/student messaging interfaces. It provides infrastructure for investigating dialogue-informed support during collaborative inquiry based learning.
 
-**Status:** first research prototype. Early-stage research prototype. Guidance is currently human-operated using a Wizard-of-Oz (WoZ) approach. Automated dialogue analysis and AI-generated interventions are planned for a later stage, following proof-of-concept validation. 
+**Status:** Early-stage research prototype. Guidance is currently human-operated using a Wizard-of-Oz (WoZ) approach. Automated dialogue analysis and AI-generated interventions are planned for a later stage, following proof-of-concept validation. 
 
 ## Features
 
