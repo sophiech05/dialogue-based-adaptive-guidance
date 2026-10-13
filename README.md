@@ -1,10 +1,10 @@
 # DBAG — Dialogue-Based Adaptive Guidance
 
-A research prototype for capturing spoken collaboration between two participants and delivering human-operated guidance during scientific inquiry.
+A research prototype for capturing spoken collaboration between two students and delivering human-operated guidance during inquiry based learning.
 
-DBAG combines stereo audio recording, calibrated speaker attribution, French speech transcription with MLX Whisper, and an operator/student messaging interface. It provides infrastructure for investigating dialogue-informed support during collaborative data analysis.
+DBAG combines stereo audio recording, calibrated speaker attribution, French speech transcription with MLX Whisper, and an operator/student messaging interfaces. It provides infrastructure for investigating dialogue-informed support during collaborative inquiry based learning.
 
-**Status:** experimental research prototype. Guidance is currently human-operated; automated dialogue analysis and AI-generated interventions are not implemented.
+**Status:** first research prototype. Early-stage research prototype. Guidance is currently human-operated using a Wizard-of-Oz (WoZ) approach. Automated dialogue analysis and AI-generated interventions are planned for a later stage, following proof-of-concept validation. 
 
 ## Features
 
@@ -26,8 +26,6 @@ DBAG combines stereo audio recording, calibrated speaker attribution, French spe
 - Headphones for live monitoring.
 - `cloudflared` for the integrated pilot's student-access tunnel.
 
-The guidance server and offline audio diagnostics can run without MLX Whisper.
-
 ## Installation
 
 Open a terminal in the project root:
@@ -35,44 +33,37 @@ Open a terminal in the project root:
 ```bash
 uv venv --python 3.11
 source .venv/bin/activate
-uv pip install -r requirements.txt
-uv pip install --no-deps -e .
+uv pip install -r requirements.txt # Install the required libraries into the Python environment
+uv pip install --no-deps -e . # Register this project with the environment, using its source files directly + dependencies were installed above, so skip installing them here.
 ```
-
-For an installation without transcription, use `uv pip install -e .`. The transcription extra is available with `uv pip install -e '.[transcription]'` on a compatible Mac.
 
 ## Configuration
 
 Create a local configuration file and list available audio devices:
 
 ```bash
-cp config.example.toml config.local.toml
-python -m dbag.tools.list_devices
+cp config.example.toml config.local.toml # Copy the settings template to create your personal configuration file
+python -m dbag.tools.list_devices # Display available microphones and audio outputs so you can choose their names
 ```
 
 Copy the example only when creating your local settings; repeating the copy overwrites existing settings.
 
-Edit `config.local.toml` to set the receiver and headphone names, calibration directory and `cloudflared` executable. Device names are matched using unique, case-insensitive fragments.
+Edit `config.local.toml` to set (1) the receiver and (2) headphone names, (3) calibration directory and (4) `cloudflared` executable. Device names are matched using unique, case-insensitive fragments.
 
-Under `[pilot]`, set:
-
-```toml
-calibration = "calibration_data"
-```
 
 Settings follow this order: **command-line arguments > local configuration > shared defaults**. The launcher forwards effective settings to its child processes.
 
 | Section | Controls |
 |---|---|
-| `audio` | Devices, monitoring gain and recording location |
-| `transcription` | Model, language, prompt, offline mode and transcript context |
-| `attribution` | Energy thresholds, window size, segmentation and calibration parameters |
-| `guidance` | Operator/student ports and guidance output location |
-| `pilot` | Calibration directory, tunnel executable, launcher output location and browser opening |
+| `audio` | Microphone/headphone selection, headphone monitoring gain, and recordings directory |
+| `transcription` | Whisper model, language, initial prompt, offline model access, recent transcript history, and audio padding for offline transcription |
+| `attribution` | Speech activity threshold, analysis window size, speech segmentation rules, and speaker calibration parameters |
+| `guidance` | Operator/student server ports and guidance logs directory |
+| `pilot` | Saved calibration directory, `cloudflared` executable, launcher logs directory, and automatic opening of the operator page |
 
-`config.local.toml` is automatically loaded from the current working directory. Use `--config /absolute/path/settings.toml` to select another file. Output and calibration paths resolve relative to that file's directory, or the current directory when no configuration file exists. Keep the configuration at the project root and run commands there.
+Keep `config.local.toml` in the project root, alongside `README.md`, and run commands from that folder. The program loads your local settings automatically.
 
-The model must be cached when `offline = true`. To allow downloading the selected model on its first transcription, use `--no-offline` with a network connection.
+If the Whisper model hasn’t been downloaded yet, run `python -m dbag.start_pilot --no-offline` with an internet connection. Once downloaded, the model can be reused with `offline = true`.
 
 ## Running a pilot
 
@@ -113,13 +104,14 @@ Cancelling or failing recalibration preserves the previous saved settings.
 ### Command-line overrides
 
 ```bash
-python -m dbag.start_pilot --output-name "External Headphones"
-python -m dbag.start_pilot --operator-port 9001 --student-port 9002
-python -m dbag.start_pilot --activity-db -45 --pause-seconds 0.8
-python -m dbag.start_pilot --no-open-browser
+python -m dbag.start_pilot --output-name "External Headphones" # Use different headphones for this run.
+python -m dbag.start_pilot --input-name "External Mic" # Use a different microphone receiver for this run.
+python -m dbag.start_pilot --operator-port 9001 --student-port 9002 # Useful when the usual ports (8765 and 8766) are already occupied—for example, by another application or a previous pilot that’s still running.
+python -m dbag.start_pilot --activity-db -45 --pause-seconds 0.8 # Require louder audio to count as speech and end a segment after 0.8 seconds of silence.
+python -m dbag.start_pilot --no-open-browser # Start the pilot without automatically opening the operator page. Later, you can open your browser and enter: http://127.0.0.1:8765/operator (change the port if needed).
 ```
 
-Use `--help` on any command to inspect its options. Attribution boundary and margin normally come from calibration; `--threshold-db` and `--margin-db` provide deliberate overrides.
+Use `--help` on any command to inspect its options. Attribution boundary and margin normally come from calibration; `--threshold-db` and `--margin-db` provide deliberate overrides (useful for testing).
 
 ## Project structure
 
@@ -142,22 +134,21 @@ Use `--help` on any command to inspect its options. Attribution boundary and mar
 |---|---|
 | Record and transcribe using saved calibration | `python -m dbag.audio.recording calibration_data` |
 | Inspect a stereo recording | `python -m dbag.tools.check_channels recordings/SESSION` |
-| Transcribe offline attributed spans | `python -m dbag.transcription.turns recordings/SESSION` |
-| Replay offline attribution labels | `python -m dbag.tools.review_speakers recordings/SESSION` |
-| Monitor headphones | `python -m dbag.audio.monitoring --input 1 --output 2` |
-| Guidance through an existing tunnel | `python -m dbag.guidance.server --public-origin https://NAME.trycloudflare.com` |
-| Guidance on a local network | `python -m dbag.guidance.core` |
-| Recover a guidance CSV | `python -m dbag.guidance.recovery guidance_sessions/SESSION` |
+| Transcribe previously attributed audio | `python -m dbag.transcription.turns recordings/SESSION` |
+| Play audio while displaying attribution labels | `python -m dbag.tools.review_speakers recordings/SESSION` |
+| Listen to microphones through headphones | `python -m dbag.audio.monitoring --input 1 --output 2` |
+| Start guidance using an existing tunnel | `python -m dbag.guidance.server --public-origin https://NAME.trycloudflare.com` |
+| Start guidance on a local network | `python -m dbag.guidance.core` |
+| Rebuild a guidance CSV from saved events | `python -m dbag.guidance.recovery guidance_sessions/SESSION` |
 
-Device numbers and session names above are placeholders. A standalone tunnel must target the configured student port. Local-network guidance uses `--port` or the configured operator port.
+Replace `SESSION` with your actual session folder name, `1` and `2` with the device numbers shown by `list_devices`, and `https://NAME.trycloudflare.com` with your tunnel’s actual URL.
 
-Offline attribution uses a separately saved 30-second calibration recording containing `stereo.wav`, following the same two-person speaking protocol:
+- **Offline transcription and replay:** the session folder must contain `stereo.wav` and a `speaker_attribution.json` file containing attributed spans. Live recording saves `attribution.jsonl`, which these tools do not read directly.
+- **Guidance through an existing tunnel:** the tunnel must target the configured student port—for example, `http://127.0.0.1:8766`. The standalone guidance command does not create the tunnel.
+- **Local-network guidance:** uses the configured operator port unless overridden with `--port`. In this mode, operator and student pages share the same port.
+- **CSV recovery:** requires `events.jsonl` in the guidance session folder and creates `guidance_recap_recovered.csv`.
 
-```bash
-python -m dbag.audio.attribution recordings/CALIBRATION --recording recordings/SESSION
-```
-
-This writes `speaker_attribution.json` for the target session. Offline transcription and replay use that file. The automatic calibration settings directory contains no audio and cannot replace the saved recording required by this offline command. Offline commands may overwrite derived attribution or transcript files in the selected session.
+Enter the tunnel URL as plain text in the command, without Markdown link syntax.
 
 ## Saved data
 
@@ -172,14 +163,22 @@ Live recording produces `stereo.wav`, `attribution.jsonl`, `dialogue.jsonl`, `di
 
 Research data, calibration settings and local configuration are excluded from Git. Back up these files separately. Audio and guidance are logged on separate timelines and are not automatically aligned.
 
-## Tests and limitations
+### Tests
 
-Run the automated checks:
+Run the automated tests from the project root:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Checks cover calibration, configuration precedence and propagation, module imports, command help, student-endpoint restrictions, and simulated capture and shutdown. They do not verify physical microphone reliability, actual Whisper recognition quality, tunnel availability or concurrent audio-device access.
+Tests check calibration calculations, configuration loading and command-line overrides, settings passed to component processes, module imports, command help, student-interface access restrictions, and simulated recording and shutdown.
 
-Energy-based attribution is sensitive to cross-talk, overlapping speech, microphone placement and speaking volume. Uncertain speech may be omitted from transcription. Acoustic segments are not validated conversational or discourse units. Transcription is asynchronous, and guidance is human-operated.
+These tests use synthetic audio and simulated devices. They do not assess real microphone performance, Whisper transcription accuracy, tunnel availability, or simultaneous recording and headphone monitoring on your computer. Verify these with a short pilot session.
+
+### Research limitations
+
+- **Speaker attribution:** channel-energy differences are affected by cross-talk, overlapping speech, microphone placement and speaking volume. Speech labelled uncertain is recorded in the original audio but excluded from live transcription.
+- **Segmentation:** speech segments are defined by acoustic rules. They should not be treated as validated conversational turns or discourse units.
+- **Transcription:** recognition accuracy and processing latency require evaluation. Transcription runs separately from recording, so text may appear with a delay.
+- **Synchronization:** audio and guidance use separate timelines and require a synchronization event.
+- **Guidance:** interventions are currently human-operated using a Wizard-of-Oz approach. Automated dialogue analysis and AI-generated interventions are planned for a later stage, following proof-of-concept validation. 

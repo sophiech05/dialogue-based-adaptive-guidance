@@ -1,5 +1,5 @@
-# Copy to config.local.toml and edit the audio names and calibration path.
-# CLI flags override this file. config.local.toml is excluded from Git.
+# Copy to config.local.toml and set your device names and cloudflared path.
+# Calibration settings are saved automatically in the configured directory.
 # Paths are relative to this file's directory unless absolute.
 
 [audio]
