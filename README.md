@@ -34,9 +34,7 @@ Open a terminal in the project root:
 uv venv --python 3.11
 source .venv/bin/activate
 uv pip install -r requirements.txt 
-# Install the required libraries into the Python environment
 uv pip install --no-deps -e . 
-# Register this project with the environment, using its source files directly + dependencies were installed above, so skip installing them here.
 ```
 
 ## Configuration
@@ -44,8 +42,8 @@ uv pip install --no-deps -e .
 Create a local configuration file and list available audio devices:
 
 ```bash
-cp config.example.toml config.local.toml # Copy the settings template to create your personal configuration file
-python -m dbag.tools.list_devices # Display available microphones and audio outputs so you can choose their names
+cp config.example.toml config.local.toml
+python -m dbag.tools.list_devices
 ```
 
 Copy the example only when creating your local settings; repeating the copy overwrites existing settings.
@@ -106,11 +104,11 @@ Cancelling or failing recalibration preserves the previous saved settings.
 ### Command-line overrides
 
 ```bash
-python -m dbag.start_pilot --output-name "External Headphones" # Use different headphones for this run.
-python -m dbag.start_pilot --input-name "External Mic" # Use a different microphone receiver for this run.
-python -m dbag.start_pilot --operator-port 9001 --student-port 9002 # Useful when the usual ports (8765 and 8766) are already occupied—for example, by another application or a previous pilot that’s still running.
-python -m dbag.start_pilot --activity-db -45 --pause-seconds 0.8 # Require louder audio to count as speech and end a segment after 0.8 seconds of silence.
-python -m dbag.start_pilot --no-open-browser # Start the pilot without automatically opening the operator page. Later, you can open your browser and enter: http://127.0.0.1:8765/operator (change the port if needed).
+python -m dbag.start_pilot --output-name "External Headphones"
+python -m dbag.start_pilot --input-name "External Mic"
+python -m dbag.start_pilot --operator-port 9001 --student-port 9002
+python -m dbag.start_pilot --activity-db -45 --pause-seconds 0.8
+python -m dbag.start_pilot --no-open-browser
 ```
 
 Use `--help` on any command to inspect its options. Attribution boundary and margin normally come from calibration; `--threshold-db` and `--margin-db` provide deliberate overrides (useful for testing).
