@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "collaboration-mvp"
+version = "0.3.0"
+description = "Stereo dialogue capture and human-operated inquiry guidance"
+requires-python = ">=3.11"
+dependencies = ["numpy", "scipy", "sounddevice", "soundfile"]
+
+[project.optional-dependencies]
+transcription = ["mlx-whisper==0.4.3"]
+
+[project.scripts]
+collaboration-pilot = "dbag.start_pilot:main"
+
+[tool.setuptools.packages.find]
+include = ["dbag*"]

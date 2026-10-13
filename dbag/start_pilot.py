@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""Start manual guidance, tunnel, recording/transcription and local listening.
-
-Place alongside your existing live_speakers.py, monitor_audio.py,
-messaging_online.py and messaging_core.py. Activate .venv, then run:
-    python start_pilot.py
-For another headphone output:
-    python start_pilot.py --output-name "External Headphones"
-Stop previous copies of all four programs before starting. Press Control+C
-once and leave the terminal open until saving finishes. Video is separate.
-The launcher does not merge the audio and guidance timelines: retain a sync
-event. Logs and a path recap are kept in pilot_runs; original audio and
-guidance remain in their existing folders. The launcher requires the cached
-Whisper model and prevents its Hugging Face network access for this run.
-"""
+"""Coordinate manual guidance, tunnel, recording, transcription and monitoring."""
 import argparse
 from datetime import datetime, timezone
 import importlib.util
@@ -28,6 +15,9 @@ import threading
 import time
 import urllib.request
 import webbrowser
+import shutil
+from dbag.config import parse_settings, child_options
+from dbag.audio.calibration import ensure_calibration
 
 
 def utc():
@@ -146,31 +136,26 @@ class Launcher:
 
 
 def main():
-    root = Path(__file__).resolve().parent
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--calibration', type=Path, default=Path('recordings/20261008_093805_608310'))
-    parser.add_argument('--output-name', default='AirPods', help='Unique headphone device name fragment')
-    parser.add_argument('--cloudflared', type=Path, default=Path.home() / 'Tools/cloudflared/cloudflared')
-    parser.add_argument('--operator-port', type=int, default=8765)
-    parser.add_argument('--student-port', type=int, default=8766)
-    parser.add_argument('--no-browser', action='store_true')
-    args = parser.parse_args()
-    calibration = args.calibration if args.calibration.is_absolute() else root / args.calibration
-    for filename in ('live_speakers.py', 'monitor_audio.py', 'messaging_online.py', 'messaging_core.py'):
-        if not (root / filename).is_file():
-            parser.error(f'Place {filename} in the same project folder as this launcher.')
-    for filename in ('stereo.wav', 'speaker_attribution.json'):
-        if not (calibration / filename).is_file():
-            parser.error(f'Missing calibration file: {calibration / filename}')
+    parser = argparse.ArgumentParser(description="Start a complete pilot; Ctrl+C saves and stops.")
+    parser.add_argument('--recalibrate', action='store_true', help='Record a fresh calibration before starting')
+    args = parse_settings(parser, ('audio', 'transcription', 'attribution', 'guidance', 'pilot'))
+    root = args.project_root
+    calibration = args.calibration
+    cloudflared = shutil.which(str(args.cloudflared))
+    if cloudflared is None:
+        parser.error('Cannot find cloudflared. Configure its executable path or add it to PATH.')
+    args.cloudflared = Path(cloudflared)
     if not args.cloudflared.is_file() or not os.access(args.cloudflared, os.X_OK):
         parser.error(f'Cannot run cloudflared: {args.cloudflared}')
     for module in ('sounddevice', 'soundfile', 'numpy', 'scipy', 'mlx_whisper'):
         if importlib.util.find_spec(module) is None:
             parser.error(f'Missing {module}. Activate your project .venv first.')
     import sounddevice as sd
+    if not args.input_name or not args.output_name:
+        parser.error('Set input_name and output_name in config.local.toml or pass --input-name and --output-name.')
     devices = sd.query_devices()
     inputs = [i for i, device in enumerate(devices)
-              if 'Wireless Mic Rx' in device['name'] and device['max_input_channels'] >= 2]
+              if args.input_name.casefold() in device['name'].casefold() and device['max_input_channels'] >= 2]
     outputs = [i for i, device in enumerate(devices)
                if args.output_name.casefold() in device['name'].casefold()
                and device['max_output_channels'] >= 2]
@@ -193,13 +178,19 @@ def main():
                 probe.bind(('127.0.0.1', port))
             except OSError:
                 parser.error(f'Port {port} is in use. Stop the previous messaging server first.')
+    try:
+        ensure_calibration(calibration, args, force=args.recalibrate)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
+    except KeyboardInterrupt:
+        parser.exit(130, '\nCalibration cancelled; pilot not started.\n')
     print(f'Receiver: {devices[inputs[0]]["name"]}', flush=True)
     print(f'Headphones: {devices[outputs[0]]["name"]}', flush=True)
     print('Stop any previously running audio scripts first. Start at low headphone volume.', flush=True)
-    folder = root / 'pilot_runs' / datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    folder = args.pilot_dir / datetime.now().strftime('%Y%m%d_%H%M%S_%f')
     folder.mkdir(parents=True)
     launcher = Launcher(root, folder)
-    launcher.manifest.update(calibration=str(calibration),
+    launcher.manifest.update(settings={k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}, calibration=str(calibration),
                              input_name=devices[inputs[0]]['name'],
                              output_name=devices[outputs[0]]['name'])
 
@@ -218,21 +209,25 @@ def main():
                                   f'http://127.0.0.1:{args.student_port}'])
         origin = launcher.wait_line('tunnel', r'https://[a-z0-9-]+\.trycloudflare\.com', 90).group(0)
         # Do not publish the student token in launcher output or its manifest.
-        launcher.spawn('guidance', [sys.executable, '-u', str(root / 'messaging_online.py'),
+        launcher.spawn('guidance', [sys.executable, '-u', '-m', 'dbag.guidance.server',
                                    '--public-origin', origin,
                                    '--operator-port', str(args.operator_port),
-                                   '--student-port', str(args.student_port)])
+                                   '--student-port', str(args.student_port)] + child_options(args, ('guidance',)))
         launcher.wait_line('guidance', r'^Operator:', 20)
         operator = f'http://127.0.0.1:{args.operator_port}/operator'
         with urllib.request.urlopen(operator, timeout=5) as response:
             if response.status != 200:
                 raise RuntimeError('Operator screen is not responding.')
         env = os.environ.copy()
-        env.update(HF_HUB_OFFLINE='1', HF_HUB_DISABLE_TELEMETRY='1', PYTHONUNBUFFERED='1')
-        launcher.spawn('recording', [sys.executable, '-u', str(root / 'live_speakers.py'), str(calibration)], env)
+        env.update(HF_HUB_DISABLE_TELEMETRY='1', PYTHONUNBUFFERED='1')
+        if args.offline:
+            env['HF_HUB_OFFLINE'] = '1'
+        else:
+            env.pop('HF_HUB_OFFLINE', None)
+        launcher.spawn('recording', [sys.executable, '-u', '-m', 'dbag.audio.recording', str(calibration)] + child_options(args, ('audio', 'transcription', 'attribution')), env)
         launcher.wait_line('recording', r'Listening to both people', 90)
-        launcher.spawn('monitor', [sys.executable, '-u', str(root / 'monitor_audio.py'),
-                                  '--input', str(inputs[0]), '--output', str(outputs[0])])
+        launcher.spawn('monitor', [sys.executable, '-u', '-m', 'dbag.audio.monitoring',
+                                  '--input', str(inputs[0]), '--output', str(outputs[0])] + child_options(args, ('audio',)))
         # The existing script announces setup just before opening its stream.
         launcher.wait_line('monitor', r'Control\+C stops listening only', 20)
         deadline = time.monotonic() + 2
@@ -242,7 +237,7 @@ def main():
         launcher.manifest.update(status='running', operator_url=operator,
                                  ready_utc=utc(), public_origin=origin)
         launcher.save()
-        if not args.no_browser:
+        if args.open_browser:
             webbrowser.open(operator)
         print(f'\nAll four programs are running. Operator: {operator}', flush=True)
         print('Copy the NEW student link from the operator screen. Make your synchronization event.', flush=True)

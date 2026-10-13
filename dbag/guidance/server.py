@@ -4,12 +4,8 @@ import argparse
 from pathlib import Path
 import threading
 from urllib.parse import urlsplit
-import messaging_core as core
-
-core.OPERATOR = core.OPERATOR.replace(
-    'Ouvrez ce lien sur le deuxième Mac, connecté au même réseau. Remplacez ADRESSE_DU_MAC par l’adresse réseau de votre Mac.',
-    'Ouvrez ce lien sur l’iPhone ou le Mac du groupe. Une connexion Internet suffit. Gardez ce lien privé.')
-
+from dbag.guidance import core
+from dbag.config import parse_settings
 
 def public_origin(value):
     parsed = urlsplit(value)
@@ -57,12 +53,14 @@ class Handler(core.Handler):
 
 
 def main():
+    core.OPERATOR = core.OPERATOR.replace(
+        'Ouvrez ce lien sur le deuxième Mac, connecté au même réseau. Remplacez ADRESSE_DU_MAC par l’adresse réseau de votre Mac.',
+        'Ouvrez ce lien sur l’iPhone ou le Mac du groupe. Une connexion Internet suffit. Gardez ce lien privé.')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--public-origin', required=True, type=public_origin)
-    parser.add_argument('--operator-port', type=int, default=8765)
-    parser.add_argument('--student-port', type=int, default=8766)
-    parser.add_argument('--data-dir', type=Path, default=Path(__file__).resolve().parent / 'guidance_sessions')
-    args = parser.parse_args()
+    parser.add_argument('--data-dir', type=Path, default=None)
+    args = parse_settings(parser, ('guidance',))
+    args.data_dir = args.data_dir or args.guidance_dir
     servers = []
     try:
         for port, student_only in ((args.operator_port, False), (args.student_port, True)):

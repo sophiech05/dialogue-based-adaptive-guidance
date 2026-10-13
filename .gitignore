@@ -30,3 +30,13 @@ code_snapshots/
 *.tmp
 *.bak
 *.swp
+
+config.local.toml
+*.egg-info/
+build/
+dist/
+archive/
+code_for_reorganization/
+reorganization_bundle/
+
+calibration_data/

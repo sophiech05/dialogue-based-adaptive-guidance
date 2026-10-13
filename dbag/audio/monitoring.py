@@ -9,7 +9,7 @@ separately for recording. Concurrent access must be tested on your Mac.
 import argparse
 import time
 import numpy as np
-import sounddevice as sd
+from dbag.config import parse_settings
 
 
 def main():
@@ -17,8 +17,9 @@ def main():
     parser.add_argument('--input', type=int, required=True, help='Receiver device number')
     parser.add_argument('--output', type=int, required=True, help='Headphone output device number')
     parser.add_argument('--samplerate', type=int, help='Default: receiver sample rate')
-    parser.add_argument('--gain', type=float, default=1.0, help='Listening gain, 0 to 2; default 1')
-    args = parser.parse_args()
+    args = parse_settings(parser, ('audio',))
+    import sounddevice as sd
+    args.gain = args.monitor_gain
     if not 0 <= args.gain <= 2:
         parser.error('--gain must be between 0 and 2')
     try:
@@ -37,16 +38,10 @@ def main():
         def callback(indata, outdata, frames, timing, status):
             if status:
                 warnings[0] += 1
-
-            if outdata.shape[1] == 2:
-                outdata[:, 0] = indata[:, 0] * args.gain  # Left: TX1
-                outdata[:, 1] = indata[:, 1] * args.gain  # Right: TX2
-            else:
-                outdata[:, 0] = (
-                    indata[:, 0] + indata[:, 1]
-                ) * 0.5 * args.gain
-
-            np.clip(outdata, -1.0, 1.0, out=outdata)
+            # Listen to both microphones in both ears; saved stereo is unchanged.
+            mixed = (indata[:, 0] + indata[:, 1]) * (0.5 * args.gain)
+            np.clip(mixed, -1.0, 1.0, out=mixed)
+            outdata[:] = mixed[:, None]
 
         print(f'Input: {source["name"]}', flush=True)
         print(f'Output: {target["name"]}', flush=True)

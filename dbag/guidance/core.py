@@ -308,11 +308,16 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    from dbag.config import parse_settings
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--port', type=int, default=None)
     parser.add_argument('--student-host', help='Your Mac network address, if automatic detection is incorrect.')
-    parser.add_argument('--data-dir', type=Path, default=Path(__file__).resolve().parent / 'guidance_sessions')
-    args = parser.parse_args()
+    parser.add_argument('--data-dir', type=Path, default=None)
+    args = parse_settings(parser, ('guidance',))
+    args.port = args.operator_port if args.port is None else args.port
+    if not 1 <= args.port <= 65535:
+        parser.error('--port must be between 1 and 65535')
+    args.data_dir = args.data_dir or args.guidance_dir
     # Bind before creating the session, so a port conflict doesn't leave a false start log.
     server = ThreadingHTTPServer(('0.0.0.0', args.port), Handler)
     server.daemon_threads = True

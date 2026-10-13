@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import threading
-from messaging_core import Session
+from dbag.guidance.core import Session
 
 
 def main():

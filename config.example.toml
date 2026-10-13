@@ -1,0 +1,40 @@
+# Copy to config.local.toml and edit the audio names and calibration path.
+# CLI flags override this file. config.local.toml is excluded from Git.
+# Paths are relative to this file's directory unless absolute.
+
+[audio]
+input_name = "Wireless Mic Rx"
+output_name = "AirPods"
+monitor_gain = 1.0
+recordings_dir = "recordings"
+
+[transcription]
+model = "mlx-community/whisper-small-mlx"
+language = "fr"
+initial_prompt = "Discussion en français entre élèves sur des mesures scientifiques, des données, des capteurs et des hypothèses."
+offline = true
+recent_seconds = 60.0
+context_seconds = 0.15
+
+[attribution]
+activity_db = -50.0
+window_seconds = 0.1
+pause_seconds = 0.6
+max_turn_seconds = 15.0
+minimum_gap_db = 6.0
+maximum_margin_db = 3.0
+# Normally derived from your calibration; uncomment only to override.
+# threshold_db = 0.0
+# margin_db = 3.0
+
+[guidance]
+operator_port = 8765
+student_port = 8766
+guidance_dir = "guidance_sessions"
+
+[pilot]
+# Created automatically on first run; no old recordings needed.
+calibration = "calibration_data"
+cloudflared = "~/Tools/cloudflared/cloudflared"
+pilot_dir = "pilot_runs"
+open_browser = true
