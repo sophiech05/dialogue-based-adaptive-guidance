@@ -1,10 +1,10 @@
 # DBAG — Dialogue-Based Adaptive Guidance
 
-A research prototype for capturing spoken collaboration between two students and delivering human-operated guidance during inquiry based learning.
+DBAG aims to develop and study adaptive guidance informed by students’ spoken dialogue during collaborative inquiry-based learning. Its long-term goal is to identify moments when support may be useful and provide timely interventions that help students navigate uncertainty, reason together, and sustain productive engagement.
 
-DBAG combines stereo audio recording, calibrated speaker attribution, French speech transcription with MLX Whisper, and an operator/student messaging interfaces. It provides infrastructure for investigating dialogue-informed support during collaborative inquiry based learning.
+The current prototype provides infrastructure for capturing spoken collaboration between two students and delivering human-operated guidance. It combines stereo audio recording, calibrated speaker attribution, French speech transcription with MLX Whisper, and separate operator and student messaging interfaces.
 
-**Status:** Early-stage research prototype. Guidance is currently human-operated using a Wizard-of-Oz (WoZ) approach. Automated dialogue analysis and AI-generated interventions are planned for a later stage, following proof-of-concept validation. 
+**Status:** Early-stage research prototype using a Wizard-of-Oz (WoZ) approach: a human operator selects and sends guidance during the activity. Automated dialogue analysis and AI-generated interventions are planned for later stages, following proof-of-concept validation.
 
 ## Features
 
