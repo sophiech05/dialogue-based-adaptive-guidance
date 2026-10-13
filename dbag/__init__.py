@@ -1,1 +1,1 @@
-"""Dialogue capture and manual guidance research prototype."""
+"""DBAG: Dialogue-Based Adaptive Guidance research prototype."""
