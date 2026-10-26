@@ -141,6 +141,17 @@ Use `--help` on any command to inspect its options. Attribution boundary and mar
 | Start guidance on a local network | `python -m dbag.guidance.core` |
 | Rebuild a guidance CSV from saved events | `python -m dbag.guidance.recovery guidance_sessions/SESSION` |
 
+Headphone monitoring automatically retries after a disconnect or stalled audio stream.
+Reconnect the same headphones; DBAG resolves their exact device name again even if
+its device number changes. It never falls back to speakers. Recording and guidance
+continue if monitoring stops or fails to start. The monitor log reports connection
+status. If the monitoring process exits entirely, reconnect your headphones, run
+`python -m dbag.tools.list_devices`, and start only monitoring in another terminal
+with the command above and the current device numbers. Avoid starting a second
+monitor while the first is still retrying. Device refresh uses sounddevice's private
+PortAudio reinitialization functions, only inside the separate monitoring process.
+Validate Bluetooth reconnection on your Mac before a pilot.
+
 Replace `SESSION` with your actual session folder name, `1` and `2` with the device numbers shown by `list_devices`, and `https://NAME.trycloudflare.com` with your tunnel’s actual URL.
 
 - **Offline transcription and replay:** the session folder must contain `stereo.wav` and a `speaker_attribution.json` file containing attributed spans. Live recording saves `attribution.jsonl`, which these tools do not read directly.

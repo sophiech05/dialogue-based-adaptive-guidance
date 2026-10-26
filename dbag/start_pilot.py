@@ -33,6 +33,7 @@ class Launcher:
         self.events = queue.Queue(maxsize=2000)
         self.stopping = False
         self.requested_stop = False
+        self.monitor_failure_reported = False
         self.manifest = {'started_utc': utc(), 'status': 'starting', 'processes': {}}
         self.save()
 
@@ -70,6 +71,11 @@ class Launcher:
             raise KeyboardInterrupt
         for name, process in self.children.items():
             code = process.poll()
+            if code is not None and name == 'monitor':
+                if not self.monitor_failure_reported:
+                    print(f'Headphone monitoring stopped (exit {code}). Recording and guidance continue. See {self.folder / "monitor.log"}', flush=True)
+                    self.monitor_failure_reported = True
+                continue
             if code is not None:
                 raise RuntimeError(f'{name} stopped (exit {code}). See {self.folder / (name + ".log")}')
 
@@ -228,8 +234,7 @@ def main():
         launcher.wait_line('recording', r'Listening to both people', 90)
         launcher.spawn('monitor', [sys.executable, '-u', '-m', 'dbag.audio.monitoring',
                                   '--input', str(inputs[0]), '--output', str(outputs[0])] + child_options(args, ('audio',)))
-        # The existing script announces setup just before opening its stream.
-        launcher.wait_line('monitor', r'Control\+C stops listening only', 20)
+        # Monitoring is optional: its startup or later failure must not stop capture.
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
             launcher.check()
@@ -239,7 +244,7 @@ def main():
         launcher.save()
         if args.open_browser:
             webbrowser.open(operator)
-        print(f'\nAll four programs are running. Operator: {operator}', flush=True)
+        print(f'\nPilot running (headphone monitoring is optional). Operator: {operator}', flush=True)
         print('Copy the NEW student link from the operator screen. Make your synchronization event.', flush=True)
         print('Control+C stops this run and waits for files to finish saving.', flush=True)
         print(f'Logs: {folder}', flush=True)
