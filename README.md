@@ -141,6 +141,16 @@ Use `--help` on any command to inspect its options. Attribution boundary and mar
 | Start guidance on a local network | `python -m dbag.guidance.core` |
 | Rebuild a guidance CSV from saved events | `python -m dbag.guidance.recovery guidance_sessions/SESSION` |
 
+
+Replace `SESSION` with your actual session folder name, `1` and `2` with the device numbers shown by `list_devices`, and `https://NAME.trycloudflare.com` with your tunnel’s actual URL.
+
+- **Offline transcription and replay:** the session folder must contain `stereo.wav` and a `speaker_attribution.json` file containing attributed spans. Live recording saves `attribution.jsonl`, which these tools do not read directly.
+- **Guidance through an existing tunnel:** the tunnel must target the configured student port—for example, `http://127.0.0.1:8766`. The standalone guidance command does not create the tunnel.
+- **Local-network guidance:** uses the configured operator port unless overridden with `--port`. In this mode, operator and student pages share the same port.
+- **CSV recovery:** requires `events.jsonl` in the guidance session folder and creates `guidance_recap_recovered.csv`.
+
+Enter the tunnel URL as plain text in the command, without Markdown link syntax.
+
 Headphone monitoring automatically retries after a disconnect or stalled audio stream.
 Reconnect the same headphones; DBAG resolves their exact device name again even if
 its device number changes. It never falls back to speakers. Recording and guidance
@@ -151,15 +161,6 @@ with the command above and the current device numbers. Avoid starting a second
 monitor while the first is still retrying. Device refresh uses sounddevice's private
 PortAudio reinitialization functions, only inside the separate monitoring process.
 Validate Bluetooth reconnection on your Mac before a pilot.
-
-Replace `SESSION` with your actual session folder name, `1` and `2` with the device numbers shown by `list_devices`, and `https://NAME.trycloudflare.com` with your tunnel’s actual URL.
-
-- **Offline transcription and replay:** the session folder must contain `stereo.wav` and a `speaker_attribution.json` file containing attributed spans. Live recording saves `attribution.jsonl`, which these tools do not read directly.
-- **Guidance through an existing tunnel:** the tunnel must target the configured student port—for example, `http://127.0.0.1:8766`. The standalone guidance command does not create the tunnel.
-- **Local-network guidance:** uses the configured operator port unless overridden with `--port`. In this mode, operator and student pages share the same port.
-- **CSV recovery:** requires `events.jsonl` in the guidance session folder and creates `guidance_recap_recovered.csv`.
-
-Enter the tunnel URL as plain text in the command, without Markdown link syntax.
 
 ## Saved data
 
